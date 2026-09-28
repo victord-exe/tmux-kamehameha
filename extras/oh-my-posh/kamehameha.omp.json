@@ -1,0 +1,85 @@
+{
+  "$schema": "https://raw.githubusercontent.com/JanDeDobbeleer/oh-my-posh/main/themes/schema.json",
+  "version": 3,
+  "final_space": true,
+  "palette": {
+    "orange": "#ff9e64",
+    "blue": "#7aa2f7",
+    "text": "#c0caf5",
+    "dim": "#a9b1d6",
+    "red": "#f7768e",
+    "yellow": "#e0af68",
+    "base": "#1a1b26"
+  },
+  "blocks": [
+    {
+      "type": "prompt",
+      "alignment": "left",
+      "newline": true,
+      "segments": [
+        {
+          "type": "path",
+          "style": "diamond",
+          "leading_diamond": "",
+          "trailing_diamond": "",
+          "foreground": "p:base",
+          "background": "p:orange",
+          "template": " {{ .Path }}",
+          "options": { "style": "folder" }
+        },
+        {
+          "type": "git",
+          "style": "plain",
+          "foreground": "p:blue",
+          "template": "   <p:text>{{ .HEAD }}</>{{ if .BranchStatus }} <p:dim>{{ .BranchStatus }}</>{{ end }}{{ if or .Working.Changed .Staging.Changed }} <p:orange>●</>{{ end }}",
+          "options": { "fetch_status": true, "branch_icon": "" }
+        },
+        {
+          "type": "executiontime",
+          "style": "plain",
+          "foreground": "p:yellow",
+          "template": "   {{ .FormattedMs }}",
+          "options": { "threshold": 3000, "style": "austin" }
+        }
+      ]
+    },
+    {
+      "type": "prompt",
+      "alignment": "right",
+      "segments": [
+        {
+          "type": "aws",
+          "style": "plain",
+          "foreground": "p:orange",
+          "template": "{{ if ne .Profile \"default\" }} {{ .Profile }}  {{ end }}"
+        },
+        {
+          "type": "status",
+          "style": "plain",
+          "foreground": "p:red",
+          "template": "✘ {{ .Code }}"
+        }
+      ]
+    },
+    {
+      "type": "prompt",
+      "alignment": "left",
+      "newline": true,
+      "segments": [
+        {
+          "type": "text",
+          "style": "plain",
+          "foreground": "p:orange",
+          "foreground_templates": ["{{ if gt .Code 0 }}p:red{{ end }}"],
+          "template": "❯"
+        }
+      ]
+    }
+  ],
+  "transient_prompt": {
+    "foreground": "p:dim",
+    "foreground_templates": ["{{ if gt .Code 0 }}p:red{{ end }}"],
+    "background": "transparent",
+    "template": "❯ "
+  }
+}
