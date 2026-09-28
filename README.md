@@ -76,14 +76,18 @@ Van antes de la línea `run '~/.tmux/plugins/tpm/tpm'`.
 
 | Opción | Default | Qué hace |
 |--------|---------|----------|
+| `@kamehameha-theme` | `kamehameha` | `skyline` cambia el acento naranja por el azul del Skyline de Brian (`#3d85ff`, con plateado de secundario) |
 | `@kamehameha-pet` | `on` | `off` quita la mascota |
 | `@kamehameha-sessions-key` | `f` | Tecla del selector de sesiones |
 | `@kamehameha-search-key` | `g` | Tecla del buscador de texto |
 
 ```tmux
+set -g @kamehameha-theme 'skyline'
 set -g @kamehameha-pet 'off'
 set -g @kamehameha-search-key '/'
 ```
+
+El tema también llega a los extras: el status line de Claude Code lo lee de tmux y el prompt de oh-my-posh de la variable `KAMEHAMEHA_THEME`, que el plugin exporta a los shells nuevos.
 
 Cuántas ventanas se ven a la vez en el preview (`MAX` en `scripts/session-picker.sh`) y cuánto historial lee el buscador (`HIST` en `scripts/text-search.sh`) se cambian en los scripts.
 

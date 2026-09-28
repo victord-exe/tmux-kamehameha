@@ -5,13 +5,20 @@ import { readFileSync, writeFileSync, statSync, existsSync, readdirSync, unlinkS
 import { tmpdir, homedir } from "os";
 import { join, basename } from "path";
 
-// --- Palette: Tokyo Night + acento naranja, la misma de ~/.tmux.conf ---
+// --- Palette: Tokyo Night; acento y secundario salen del tema de tmux-kamehameha (@kh_accent / @kh_accent2) ---
 const hex = (h) => h.match(/\w\w/g).map((x) => parseInt(x, 16)).join(";");
 const fg = (h) => `\x1b[38;2;${hex(h)}m`;
 const bg = (h) => `\x1b[48;2;${hex(h)}m`;
+let [ACCENT, ACCENT2] = ["ff9e64", "7aa2f7"]; // fuera de tmux o sin el plugin: el naranja de siempre
+try {
+  if (process.env.TMUX) {
+    const [a, b] = execSync("tmux display -p '#{@kh_accent} #{@kh_accent2}'", { stdio: ["pipe", "pipe", "pipe"], timeout: 1000 }).toString().trim().split(" ");
+    if (a && b) [ACCENT, ACCENT2] = [a.slice(1), b.slice(1)];
+  }
+} catch { /* sin tmux */ }
 const COLORS = {
-  orange: fg("ff9e64"),
-  blue: fg("7aa2f7"),
+  accent: fg(ACCENT),
+  accent2: fg(ACCENT2),
   text: fg("c0caf5"),
   dim: fg("a9b1d6"),
   track: fg("545c7e"),
@@ -232,14 +239,14 @@ const folder = dir ? basename(dir) : "";
 // --- Line 1 ---
 const sessionCost = cost.toFixed(4);
 // Pill del modelo, igual a la de la sesi\u00f3n en tmux (glyphs Nerd Font)
-const pill = `${COLORS.orange}\ue0b6${bg("ff9e64")}${fg("1a1b26")}${COLORS.bold}\u{F06A9} ${model}${COLORS.reset}${COLORS.orange}\ue0b4${COLORS.reset}`;
-const folderStr = folder ? `${SEP}${COLORS.blue}\uf115 ${COLORS.text}${folder}${COLORS.reset}` : "";
+const pill = `${COLORS.accent}\ue0b6${bg(ACCENT)}${fg("1a1b26")}${COLORS.bold}\u{F06A9} ${model}${COLORS.reset}${COLORS.accent}\ue0b4${COLORS.reset}`;
+const folderStr = folder ? `${SEP}${COLORS.accent2}\uf115 ${COLORS.text}${folder}${COLORS.reset}` : "";
 const gitInfo = getGitInfo(dir);
 let gitStr = "";
 if (gitInfo) {
   const { branch, dirty } = gitInfo;
-  const dirtyMark = dirty ? ` ${COLORS.orange}\u25cf${COLORS.reset}` : "";
-  gitStr = `${SEP}${COLORS.blue}\ue0a0 ${COLORS.text}${branch}${COLORS.reset}${dirtyMark}`;
+  const dirtyMark = dirty ? ` ${COLORS.accent}\u25cf${COLORS.reset}` : "";
+  gitStr = `${SEP}${COLORS.accent2}\ue0a0 ${COLORS.text}${branch}${COLORS.reset}${dirtyMark}`;
 }
 const line1 = `${pill}${folderStr}${gitStr}${SEP}${COLORS.yellow}$${sessionCost}${COLORS.reset}`;
 
