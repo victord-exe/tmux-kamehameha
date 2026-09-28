@@ -261,7 +261,9 @@ function buildLine2(s) {
 
 // --- Layout: info a la izquierda, barras pegadas a la derecha si caben en una línea ---
 // El script corre sin tty, así que el ancho sale de tmux; fuera de tmux quedan las dos líneas
-const visible = (s) => [...s.replace(/\x1b\[[0-9;]*m/g, "")].length;
+// Claude Code mide los glifos Nerd Font (Private Use Area) como ancho 2; contarlos igual para que no corte con "…"
+const isPUA = (cp) => (cp >= 0xe000 && cp <= 0xf8ff) || cp >= 0xf0000;
+const visible = (s) => [...s.replace(/\x1b\[[0-9;]*m/g, "")].reduce((n, ch) => n + (isPUA(ch.codePointAt(0)) ? 2 : 1), 0);
 let width = 0;
 try {
   if (process.env.TMUX_PANE) {
