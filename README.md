@@ -31,7 +31,7 @@ Un frame por segundo, con el mismo ancho en todos para que la barra no se mueva.
 
 | Cuándo | Qué hace |
 |--------|----------|
-| Normal | `(ง•_•)ง` → `(ﾉ•ω•)ﾉ·` → `∘` → `●` → `(ﾉ>ω<)ﾉ━━━●` → `(ﾉ>ω<)ﾉ━━━━━━●` |
+| Normal | Carga `(ﾉ•ω•)ﾉ·` → `∘` → `○` → `●` → `◉`, dispara `(ﾉ>ω<)ﾉ━●` → `━━━━━━✺` con gradiente, suelta chispas `ﾟ･✧` y descansa `(ง˘ω˘)ง`. Ciclo de 12 s |
 | Apretaste el prefix | En guardia: `(ง°Д°)ง` |
 | Un pane en zoom | Super Saiyajin, en amarillo y con el aura parpadeando: `ϟ(ﾉ>Д<)ﾉϟ` |
 | Batería bajo 20% y desenchufada (macOS) | Cansado: `(ﾉ-ω-)ﾉ zzz` |
