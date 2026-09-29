@@ -122,6 +122,24 @@ Claude Code carga los hooks al arrancar: las sesiones abiertas antes de agregarl
 eval "$(oh-my-posh init zsh --config /ruta/a/kamehameha.omp.json)"
 ```
 
+### mundito: un cerebro arriba de la terminal
+
+![mundito](assets/mundito.png)
+
+`extras/mundito/` no depende de tmux: es zsh con Python 3, sin paquetes externos. Dibuja un cerebro en Braille arriba de la terminal, con luz que barre, ondas de actividad y un aura. Alrededor giran tus palabras en hasta tres órbitas. Sigue animado mientras escribes, porque zle pinta cada frame entre teclas.
+
+```sh
+# en ~/.zshrc
+[[ -o interactive && -t 1 ]] && source /ruta/a/extras/mundito/mundito.zsh && mundito-on
+```
+
+Las palabras van en `~/.config/mundito/config.json` (o en la ruta de `$MUNDITO_CONFIG`). Copia `config.example.json` y cámbialas: cada órbita lleva color, glyph y hasta 6 items. Si no hay config, usa el ejemplo.
+
+- Las filas de arriba quedan fuera del scroll region, así que la salida de los comandos no las pisa.
+- Con un comando corriendo se pausa solo. Dentro de tmux solo anima el pane que está a la vista.
+- Se apaga solo antes de `claude`, `codex`, `opencode`, `ssh` y `tmux`, que necesitan la pantalla completa. A mano: `mundito-off` y `mundito-on`.
+- Arranca solo si la terminal tiene al menos 32 filas y 60 columnas. `mundito` sin argumentos imprime un frame estático.
+
 ## Regenerar los demos
 
 Los GIFs salen de [VHS](https://github.com/charmbracelet/vhs) sobre un servidor tmux aparte (`-L kh-demo`), con sesiones y contenido de ejemplo, así que no tocan tu tmux:
