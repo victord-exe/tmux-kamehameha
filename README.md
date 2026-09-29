@@ -124,7 +124,7 @@ eval "$(oh-my-posh init zsh --config /ruta/a/kamehameha.omp.json)"
 
 ### mundito: un cerebro arriba de la terminal
 
-![mundito](assets/mundito.png)
+![mundito](assets/mundito.gif)
 
 `extras/mundito/` no depende de tmux: es zsh con Python 3, sin paquetes externos. Dibuja un cerebro en Braille arriba de la terminal, con luz que barre, ondas de actividad y un aura. Alrededor giran tus palabras en hasta tres órbitas. Sigue animado mientras escribes, porque zle pinta cada frame entre teclas.
 
@@ -146,7 +146,7 @@ Los GIFs salen de [VHS](https://github.com/charmbracelet/vhs) sobre un servidor 
 
 ```sh
 brew install vhs
-vhs demo/hero.tape && vhs demo/sessions.tape && vhs demo/search.tape
+vhs demo/hero.tape && vhs demo/sessions.tape && vhs demo/search.tape && vhs demo/mundito.tape
 ```
 
 `demo/setup.sh` arma ese servidor; puedes correrlo solo y entrar con `tmux -L kh-demo attach -t api`.

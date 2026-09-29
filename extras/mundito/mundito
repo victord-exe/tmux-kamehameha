@@ -103,8 +103,9 @@ def brain(put, t):
             if light * 16 > BAYER[(4 * y + sy) % 4][(2 * x + sx) % 4] + 1:  # dithering ordenado
                 bits |= DOTS[sy][sx]; tot += light
         if not bits: continue
-        lum = min(1, tot / max(1, len(subs)) + 0.25)
-        wave = max(0, math.sin(4 * u - 2.5 * v - t * 0.18)) ** 8  # onda de actividad neuronal
+        # colores cuantizados (6 niveles de luz, 4 de onda): celdas vecinas comparten escape, el frame pesa menos
+        lum = round(min(1, tot / max(1, len(subs)) + 0.25) * 5) / 5
+        wave = round(max(0, math.sin(4 * u - 2.5 * v - t * 0.18)) ** 8 * 3) / 3  # onda de actividad neuronal
         r, g, b = 120 + 135 * lum, 50 + 120 * lum, 140 + 95 * lum
         put(x, y, chr(0x2800 + bits), rgb(r + (125 - r) * wave, g + (230 - g) * wave, b + (255 - b) * wave))
     for x, y in AURA:
