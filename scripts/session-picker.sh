@@ -3,6 +3,10 @@
 # ←/→ o Tab/Shift-Tab recorren las ventanas de la sesión elegida dentro del preview; Enter entra a esa ventana.
 # El script se llama a sí mismo con --preview, --move y --go. La ventana elegida vive en $PICKER_STATE ("sesion<TAB>indice").
 
+# Colores del tema activo (los publica kamehameha.tmux); AE es el acento como escape truecolor
+A=$(tmux show -gqv @kh_accent); A=${A:-#ff9e64}; B=$(tmux show -gqv @kh_accent2); B=${B:-#7aa2f7}
+AE=$(printf '\033[38;2;%d;%d;%dm' 0x${A:1:2} 0x${A:3:2} 0x${A:5:2})
+
 sel() { # ventana elegida para la sesión $1: la guardada si es de esa sesión, si no la activa
   local st; st=$(cat "$PICKER_STATE" 2>/dev/null)
   if [ -n "$st" ] && [ "${st%%$'\t'*}" = "$1" ]; then echo "${st#*$'\t'}"
@@ -15,7 +19,7 @@ case "$1" in
     # Lista de ventanas con scroll: máximo MAX filas, centrada en la elegida, con "↑/↓ N más" para lo que queda fuera
     MAX=6
     head=$(tmux list-windows -t "=$2" -F "#{window_index}	#{window_name}	#{window_bell_flag}" |
-      awk -F'\t' -v w="$w" -v max="$MAX" '
+      awk -F'\t' -v w="$w" -v max="$MAX" -v ae="$AE" '
         {i[NR] = $1; nm[NR] = $2; b[NR] = $3; if ($1 == w) c = NR}
         END {
           s = c - int(max / 2); if (s > NR - max + 1) s = NR - max + 1; if (s < 1) s = 1
@@ -23,7 +27,7 @@ case "$1" in
           D = "\033[38;2;169;177;214m"
           if (s > 1) printf "%s  ↑ %d más\033[0m\n", D, s - 1
           for (k = s; k <= e; k++)
-            printf "%s%s %s%s\033[0m\n", (k == c ? "\033[38;2;255;158;100m\033[1m▶ " : "  "), i[k], nm[k], (b[k] == 1 ? " 🔔" : "")
+            printf "%s%s %s%s\033[0m\n", (k == c ? ae "\033[1m▶ " : "  "), i[k], nm[k], (b[k] == 1 ? " 🔔" : "")
           if (e < NR) printf "%s  ↓ %d más\033[0m\n", D, NR - e
         }')
     printf '%s\n' "$head"
@@ -55,5 +59,5 @@ tmux ls -F "#{session_name}	#{session_windows}w#{?session_attached, ●,}#{?sess
     --bind "right:execute-silent($0 --move {1} 1)+refresh-preview,tab:execute-silent($0 --move {1} 1)+refresh-preview" \
     --bind "left:execute-silent($0 --move {1} -1)+refresh-preview,shift-tab:execute-silent($0 --move {1} -1)+refresh-preview" \
     --bind "enter:become($0 --go {1})" \
-    --color 'fg:#c0caf5,bg:-1,hl:#ff9e64,fg+:#c0caf5,bg+:#292e42,hl+:#ff9e64,pointer:#ff9e64,prompt:#7aa2f7,info:#a9b1d6,border:#545c7e,label:#ff9e64'
+    --color "fg:#c0caf5,bg:-1,hl:$A,fg+:#c0caf5,bg+:#292e42,hl+:$A,pointer:$A,prompt:$B,info:#a9b1d6,border:#545c7e,label:$A"
 exit 0

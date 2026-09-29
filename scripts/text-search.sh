@@ -7,9 +7,13 @@
 HIST=5000
 cap() { tmux capture-pane -p -J -S "-$HIST" -t "$@"; }
 
+# Colores del tema activo (los publica kamehameha.tmux); AE es el acento como escape truecolor
+A=$(tmux show -gqv @kh_accent); A=${A:-#ff9e64}; B=$(tmux show -gqv @kh_accent2); B=${B:-#7aa2f7}
+AE=$(printf '\033[38;2;%d;%d;%dm' 0x${A:1:2} 0x${A:3:2} 0x${A:5:2})
+
 case "$1" in
   --preview)
-    cap "$2" -e | awk -v l="$3" 'NR == l {print "\033[38;2;255;158;100m\033[1m▶\033[0m " $0; next} {print "  " $0}'
+    cap "$2" -e | awk -v l="$3" -v ae="$AE" 'NR == l {print ae "\033[1m▶\033[0m " $0; next} {print "  " $0}'
     exit 0 ;;
   --go)
     text=$(cap "$2" | sed -n "${3}p" | sed 's/[[:space:]]*$//')
@@ -30,5 +34,5 @@ tmux list-panes -a -F "#{pane_id}	#{session_name}:#{window_index}.#{pane_index}"
     --input-label ' Buscar texto ' --list-label ' Coincidencias ' --preview-label ' Preview · Enter salta a la línea ' \
     --preview "$0 --preview {1} {2}" --preview-window 'right,55%,+{2}-/2' \
     --bind "enter:become($0 --go {1} {2})" \
-    --color 'fg:#c0caf5,bg:-1,hl:#ff9e64,fg+:#c0caf5,bg+:#292e42,hl+:#ff9e64,pointer:#ff9e64,prompt:#7aa2f7,info:#a9b1d6,border:#545c7e,label:#ff9e64'
+    --color "fg:#c0caf5,bg:-1,hl:$A,fg+:#c0caf5,bg+:#292e42,hl+:$A,pointer:$A,prompt:$B,info:#a9b1d6,border:#545c7e,label:$A"
 exit 0

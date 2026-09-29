@@ -3,13 +3,19 @@
   "version": 3,
   "final_space": true,
   "palette": {
-    "orange": "#ff9e64",
-    "blue": "#7aa2f7",
+    "accent": "#ff9e64",
+    "accent2": "#7aa2f7",
     "text": "#c0caf5",
     "dim": "#a9b1d6",
     "red": "#f7768e",
     "yellow": "#e0af68",
     "base": "#1a1b26"
+  },
+  "palettes": {
+    "template": "{{ .Env.KAMEHAMEHA_THEME }}",
+    "list": {
+      "skyline": { "accent": "#3d85ff", "accent2": "#c0caf5" }
+    }
   },
   "blocks": [
     {
@@ -23,15 +29,15 @@
           "leading_diamond": "",
           "trailing_diamond": "",
           "foreground": "p:base",
-          "background": "p:orange",
+          "background": "p:accent",
           "template": " {{ .Path }}",
           "options": { "style": "folder" }
         },
         {
           "type": "git",
           "style": "plain",
-          "foreground": "p:blue",
-          "template": "   <p:text>{{ .HEAD }}</>{{ if .BranchStatus }} <p:dim>{{ .BranchStatus }}</>{{ end }}{{ if or .Working.Changed .Staging.Changed }} <p:orange>●</>{{ end }}",
+          "foreground": "p:accent2",
+          "template": "   <p:text>{{ .HEAD }}</>{{ if .BranchStatus }} <p:dim>{{ .BranchStatus }}</>{{ end }}{{ if or .Working.Changed .Staging.Changed }} <p:accent>●</>{{ end }}",
           "options": { "fetch_status": true, "branch_icon": "" }
         },
         {
@@ -50,7 +56,7 @@
         {
           "type": "aws",
           "style": "plain",
-          "foreground": "p:orange",
+          "foreground": "p:accent",
           "template": "{{ if ne .Profile \"default\" }} {{ .Profile }}  {{ end }}"
         },
         {
@@ -69,7 +75,7 @@
         {
           "type": "text",
           "style": "plain",
-          "foreground": "p:orange",
+          "foreground": "p:accent",
           "foreground_templates": ["{{ if gt .Code 0 }}p:red{{ end }}"],
           "template": "❯"
         }

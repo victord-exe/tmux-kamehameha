@@ -1,0 +1,194 @@
+#!/usr/bin/env python3
+"""mundito: un cerebro en Braille, con lo que quieras orbitando alrededor.
+`mundito [t]`      poster estático del frame t (sin animar)
+`mundito --stream` un frame por línea en stdout, para mundito.zsh (lo pinta zle)
+Las órbitas salen de $MUNDITO_CONFIG o ~/.config/mundito/config.json (ver config.example.json)."""
+import json, math, os, random, subprocess, sys, time
+
+W, H, CX, CY = 100, 23, 50, 11
+ROWS = H
+FPS = 12
+rgb = lambda r, g, b: f"\x1b[38;2;{int(r)};{int(g)};{int(b)}m"
+hexc = lambda h: rgb(int(h[:2], 16), int(h[2:4], 16), int(h[4:], 16))
+DIM, STAR, R = hexc("545c7e"), hexc("c0caf5"), "\x1b[0m"
+
+# órbitas de adentro hacia afuera: (rx, ry, velocidad, fase). Caben 3 en la escena
+RINGS = [(27, 6.5, 0.060, 1.75), (37, 8.8, -0.040, 0.0), (47, 11.0, 0.028, 0.8)]
+DEFAULT = {"orbits": [
+    {"color": "#ff9e64", "glyph": "✦", "items": ["api", "web", "docs"]},
+    {"color": "#7dcfff", "glyph": "◆", "items": ["infra", "data", "mobile", "ml"]},
+    {"color": "#9ece6a", "glyph": "✧", "items": ["ideas", "lab", "side project", "oss"]},
+]}
+
+def load_orbits():
+    path = os.environ.get("MUNDITO_CONFIG", os.path.expanduser("~/.config/mundito/config.json"))
+    try:
+        with open(path) as f: cfg = json.load(f)
+    except (OSError, ValueError):
+        cfg = DEFAULT  # sin config o con JSON roto: el ejemplo
+    orbits = []
+    for ring, o in zip(RINGS, cfg.get("orbits", [])):
+        items = [str(i)[:18] for i in o.get("items", [])][:6]
+        color = str(o.get("color", "#c0caf5")).lstrip("#")
+        if items: orbits.append((hexc(color if len(color) == 6 else "c0caf5"), str(o.get("glyph", "•"))[:1], *ring, items))
+    return orbits
+ORBITS = load_orbits()
+random.seed(7)
+STARS = [(random.randrange(W), random.randrange(H), random.random() * 6) for _ in range(40)]
+
+# cerebro visto de lado (u = adelante→atrás, v = arriba), como SDF de elipses: (centro, radios)
+LOBES = [((0.0, 0.12), (1.0, 0.64)),      # cerebro
+         ((-0.28, -0.26), (0.58, 0.32)),  # lóbulo temporal
+         ((0.66, -0.42), (0.34, 0.22)),   # cerebelo
+         ((0.36, -0.66), (0.10, 0.28))]   # tronco
+SX, SY = 21.0, 9.0                        # celdas por unidad (las celdas son 2:1)
+SYLVIO = ((-0.62, -0.14), (0.42, 0.06))   # la cisura lateral: la línea que hace que se lea "cerebro"
+
+def sdf(u, v):
+    return min((math.hypot((u - c[0]) / r[0], (v - c[1]) / r[1]) - 1) * min(r) for c, r in LOBES)
+
+def gyri(u, v):
+    # circunvoluciones: dos familias de senos con domain warp; sus ceros son los surcos
+    w1, w2 = u + 0.22 * math.sin(7 * v + 1.3), v + 0.18 * math.sin(8 * u + 0.4)
+    return math.sin(17 * w1 + 5 * math.sin(4 * w2)) + math.sin(18 * w2 + 4 * math.sin(5 * w1))
+
+def seg_dist(u, v, a, b):  # distancia al segmento, en subpíxeles
+    (ax, ay), (bx, by) = a, b
+    k = max(0, min(1, ((u - ax) * (bx - ax) + (v - ay) * (by - ay)) / ((bx - ax) ** 2 + (by - ay) ** 2)))
+    return math.hypot((u - ax - k * (bx - ax)) * SX * 2, (v - ay - k * (by - ay)) * SY * 4)
+
+# Braille: cada celda son 2x4 subpíxeles, ~4x más resolución que un caracter por celda
+DOTS = ((0x01, 0x08), (0x02, 0x10), (0x04, 0x20), (0x40, 0x80))
+BAYER = ((0, 8, 2, 10), (12, 4, 14, 6), (3, 11, 1, 9), (15, 7, 13, 5))
+BX0, BY0 = CX - 24, CY - 9
+
+def _build():
+    # el cerebro no se mueve: todo lo geométrico se calcula una vez. Por subpíxel: None (fuera), "on" o (nu, nv, dome)
+    du, dv = 1 / (2 * SX), 1 / (4 * SY)
+    cells = {}
+    for y in range(BY0, CY + 10):
+        for x in range(BX0, CX + 25):
+            subs = []
+            for sy in range(4):
+                for sx in range(2):
+                    u, v = (x - CX + (sx + 0.5) / 2 - 0.5) / SX, (CY - y - (sy + 0.5) / 4 + 0.5) / SY
+                    d = sdf(u, v)
+                    if d >= 0: continue
+                    gu, gv = sdf(u + du, v) - sdf(u - du, v), sdf(u, v + dv) - sdf(u, v - dv)
+                    gm = math.hypot(gu, gv) / 2 + 1e-9
+                    if -d / gm < 1.3: subs.append((sx, sy, "on")); continue            # contorno
+                    if seg_dist(u, v, *SYLVIO) < 1.6: continue                         # cisura de Silvio
+                    in_cb = math.hypot((u - 0.66) / 0.34, (v + 0.42) / 0.22) < 1 and v < -0.25
+                    if in_cb:
+                        if (4 * y + sy) % 3 == 0: continue                              # folia del cerebelo
+                    else:
+                        g = gyri(u, v)
+                        hg = math.hypot(gyri(u + du, v) - g, gyri(u, v + dv) - g) + 1e-9
+                        if abs(g) / hg < 0.9: continue                                  # surco
+                    subs.append((sx, sy, (-gu / (2 * gm), -gv / (2 * gm), min(1, -d / 0.3))))
+            if subs: cells[(x, y)] = subs
+    return cells
+CELLS = _build()
+
+def brain(put, t):
+    lx, ly = 0.9 * math.cos(t * 0.05), 0.7  # la luz barre de un lado al otro
+    for (x, y), subs in CELLS.items():
+        u, v = (x - CX) / SX, (CY - y) / SY
+        bits, tot = 0, 0.0
+        for sx, sy, n in subs:
+            if n == "on":
+                bits |= DOTS[sy][sx]; tot += 1; continue
+            nu, nv, dome = n
+            light = 0.25 + 0.75 * max(0, (lx * nu + ly * nv) * (1 - dome) + 0.7 * dome)
+            if light * 16 > BAYER[(4 * y + sy) % 4][(2 * x + sx) % 4] + 1:  # dithering ordenado
+                bits |= DOTS[sy][sx]; tot += light
+        if not bits: continue
+        # colores cuantizados (6 niveles de luz, 4 de onda): celdas vecinas comparten escape, el frame pesa menos
+        lum = round(min(1, tot / max(1, len(subs)) + 0.25) * 5) / 5
+        wave = round(max(0, math.sin(4 * u - 2.5 * v - t * 0.18)) ** 8 * 3) / 3  # onda de actividad neuronal
+        r, g, b = 120 + 135 * lum, 50 + 120 * lum, 140 + 95 * lum
+        put(x, y, chr(0x2800 + bits), rgb(r + (125 - r) * wave, g + (230 - g) * wave, b + (255 - b) * wave))
+    for x, y in AURA:
+        if (x * 7 + y * 13 + t // 3) % 6 == 0:  # aura neón que titila alrededor
+            put(x, y, chr(0x2800 + (0x01, 0x04, 0x10, 0x40, 0x80, 0x20)[(x + y + t // 3) % 6]), rgb(150, 90, 200))
+AURA = {(x + dx, y + dy) for x, y in CELLS for dx in (-2, -1, 1, 2) for dy in (-1, 0, 1)} - set(CELLS)
+
+def frame(t):
+    g = [[(" ", "")] * W for _ in range(H)]
+    put = lambda x, y, ch, c: 0 <= x < W and 0 <= y < H and g[y].__setitem__(x, (ch, c))
+    for x, y, p in STARS:
+        tw = (math.sin(t * 0.4 + p) + 1) / 2
+        put(x, y, "·" if tw < 0.6 else "+" if tw < 0.9 else "✧", DIM if tw < 0.6 else STAR)
+
+    moons = []  # (profundidad, x, y, etiqueta, color)
+    for col, gl, rx, ry, sp, ph, names in ORBITS:
+        for i in range(28):  # la ruta, tenue
+            a = i / 28 * 2 * math.pi
+            put(round(CX + rx * math.cos(a)), round(CY + ry * math.sin(a)), "·", hexc("3b4261"))
+        for i, name in enumerate(names):
+            a = t * sp + ph + i * 2 * math.pi / len(names)
+            moons.append((math.sin(a), round(CX + rx * math.cos(a)), round(CY + ry * math.sin(a)), f"{gl} {name}", col))
+
+    def draw_moon(dep, x, y, label, col):
+        x0 = x if x <= CX else x - len(label) + 1  # etiqueta hacia adentro para no salirse
+        for k, ch in enumerate(label):
+            put(x0 + k, y, ch, col)
+
+    for m in moons:  # las de atrás, tenues; si la etiqueta choca con el cerebro, se esconde completa
+        dep, x, y, label, col = m
+        x0 = x if x <= CX else x - len(label) + 1
+        if dep < 0 and not any((x0 + k, y) in CELLS for k in range(len(label))):
+            draw_moon(dep, x, y, label, DIM)
+    brain(put, t)
+    for m in moons:
+        if m[0] >= 0: draw_moon(*m)
+    return g
+
+def render(g, t, cols=W):
+    """Lista de ROWS líneas con color, recortadas a `cols` y sin padding."""
+    x0 = max(0, (W - cols) // 2)  # terminal angosta: recorta por los lados, centrado
+    rows = []
+    for row in g:
+        line, last = [], None
+        for ch, c in row[x0:x0 + cols]:
+            if c != last: line.append(R + c); last = c  # color solo cuando cambia: frames más livianos
+            line.append(ch)
+        rows.append("".join(line) + R)
+    return rows
+
+def visible():
+    # en tmux: solo animar si el pane está en la ventana activa de una sesión con cliente
+    pane = os.environ.get("TMUX_PANE")
+    if not pane: return True
+    try:
+        out = subprocess.run(["tmux", "display", "-p", "-t", pane, "#{&&:#{window_active},#{session_attached}}"],
+                             capture_output=True, text=True, timeout=1).stdout.strip()
+        return out != "0"
+    except Exception:
+        return True
+
+def stream():
+    # frame = una línea con posiciones absolutas (filas 1..ROWS); zle la pinta entre teclas
+    tty_fd = os.open("/dev/tty", os.O_RDONLY)
+    out, t, shown = sys.stdout.buffer, 0, True
+    try:
+        while True:
+            if t % FPS == 0: shown = visible()  # ponytail: un `tmux display` por segundo, basta
+            if not shown:
+                time.sleep(1); t += FPS; continue
+            cols = os.get_terminal_size(tty_fd).columns
+            pad = " " * max(0, (cols - W) // 2)
+            rows = render(frame(t), t, cols)
+            out.write(("".join(f"\x1b[{i + 1};1H\x1b[2K{pad}{r}" for i, r in enumerate(rows)) + "\n").encode())
+            out.flush()  # con la shell ocupada el pipe se llena y esto bloquea: pausa gratis
+            time.sleep(1 / FPS)
+            t += 1
+    except (BrokenPipeError, KeyboardInterrupt):
+        pass  # la shell cerró el fd: se acabó
+
+if __name__ == "__main__":
+    if "--stream" in sys.argv:
+        stream()
+    else:
+        t = int(sys.argv[1]) if len(sys.argv) > 1 else 40
+        print("\n".join(render(frame(t), t)))

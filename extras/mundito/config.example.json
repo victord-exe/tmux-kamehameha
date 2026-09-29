@@ -1,0 +1,7 @@
+{
+  "orbits": [
+    { "color": "#ff9e64", "glyph": "✦", "items": ["api", "web", "docs"] },
+    { "color": "#7dcfff", "glyph": "◆", "items": ["infra", "data", "mobile", "ml"] },
+    { "color": "#9ece6a", "glyph": "✧", "items": ["ideas", "lab", "side project", "oss"] }
+  ]
+}
